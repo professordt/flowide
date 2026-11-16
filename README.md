@@ -42,6 +42,7 @@ Requires **Python 3.9+**. No third-party packages — standard library only.
 - `flow slice` walks your repo and cuts it into ≤150-LOC roadmap nodes wired into a 3200-slot band lattice.
 - `flow up` runs three local daemons: a fuel harvester (thermal / load / grid / battery), a 5/32 airgap sweeper (lint + archive + git hygiene), and the dashboard.
 - `flow hop` executes one stateless relay-baton hop; `flow status` prints the exact fractions; `flow audit` verifies the SHA-256 baton chain.
+- The dashboard is an **operator console**: it shows every roadmap node (`GET /api/nodes`) and runs the substrate actions (slice / init / hop / sweep / audit / export / unstall) from buttons — see [What the buttons do](#what-the-buttons-do--and-who-can-press-them).
 
 ## Usage
 
@@ -92,6 +93,32 @@ Want it local-only instead? Start with `FLOW_DASH_HOST=127.0.0.1 flow up`.
 **Security:** the dashboard has **no authentication**. It is intended for a trusted
 LAN (your own machines, your own network). Do not expose it to the public internet;
 if you need remote access, put it behind a VPN — do not port-forward it.
+
+### What the buttons do — and who can press them
+
+The dashboard is an **operator console**, not a read-only monitor. Each button runs
+a real command on this machine as the user who started `flow up`:
+
+| Button | Endpoint | Runs |
+|---|---|---|
+| SLICE | `POST /api/slice` | `flow slice` — decompose the repo into ≤150-LOC roadmap nodes **into this console's substrate DB** (it does not edit the target repo) |
+| INIT | `POST /api/init` | `flow init` — scaffold `.flow/` and append the `.gitignore` entry in the target repo |
+| HOP | `POST /api/hop` | `flow hop` — one 1/32 relay-baton hop (needs a local SLM at `FLOW_LLM_URL`) |
+| SWEEP | `POST /api/sweep` | `flow sweep` — one 5/32 airgap lint/squash/archive pass |
+| AUDIT | `POST /api/audit` | `flow audit` — verify the SHA-256 baton chain |
+| EXPORT | `POST /api/export` | `flow export` — milestone summary (`format: markdown|json`) |
+| UNSTALL | `POST /api/unstall` | `flow unstall` — inspect stalls; resets nodes only with `apply: true` |
+| + INJECT NODE | `POST /api/nodes` | insert one coordinate straight into the roadmap |
+
+**Who can press them:** anyone who can reach port 9898 on this machine, with the
+privileges of the user running the supervisor. That is the same trust boundary as
+the rest of the LAN dashboard — it is not a second door, but it *is* a door that
+executes things. Input is fenced: a `repo` must be an existing directory inside
+`/home/pdt` or `/tmp/opencode` (override with the `ALLOWED_ROOTS` constant), actions
+run as argv lists with no shell interpolation, and each action is killed after 60s
+(120s for `slice`/`hop`). If you want a lock: set `FLOW_DASH_HOST=127.0.0.1` to bind
+loopback only, or front it with your own shared-secret proxy — both are supported
+without code changes.
 
 All local state lives in `<repo>/.flow/` (git-ignored) — database, logs, pid file.
 
