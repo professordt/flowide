@@ -20,7 +20,9 @@ Then, in a new shell:
 flow up
 ```
 
-The dashboard opens on **http://127.0.0.1:9898**.
+The dashboard opens on **http://127.0.0.1:9898** (and, because it binds `0.0.0.0`,
+on `http://<this-machine-LAN-IP>:9898` from other machines — see
+[Open it on your network](#open-it-on-your-network)).
 
 Or install with pip:
 
@@ -68,6 +70,28 @@ FLOW_DASH_PORT=9000 flow up
 ```
 
 `FLOW_DASH_HOST` sets the bind address (default `0.0.0.0`, i.e. LAN-visible; use `FLOW_DASH_HOST=127.0.0.1` for loopback only).
+
+### Open it on your network
+
+The dashboard binds `0.0.0.0` by default, so you can open it from any machine on the
+same local network:
+
+```
+http://<this-machine-LAN-IP>:9898
+```
+
+Find the IP with `hostname -I` (Linux/macOS) or `ipconfig` (Windows). The supervisor
+prints both the loopback and LAN URLs on startup, for example:
+
+```
+[LIVE] Flow IDE active | bind 0.0.0.0:9898 | local http://127.0.0.1:9898 | LAN http://192.168.1.23:9898 | Ctrl+C to stop.
+```
+
+Want it local-only instead? Start with `FLOW_DASH_HOST=127.0.0.1 flow up`.
+
+**Security:** the dashboard has **no authentication**. It is intended for a trusted
+LAN (your own machines, your own network). Do not expose it to the public internet;
+if you need remote access, put it behind a VPN — do not port-forward it.
 
 All local state lives in `<repo>/.flow/` (git-ignored) — database, logs, pid file.
 

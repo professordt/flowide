@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 import argparse
 import os
 import signal
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -30,6 +31,16 @@ def _install_signal_handlers() -> None:
             signal.signal(sig, _handle_shutdown)
         except (ValueError, OSError, AttributeError):
             continue
+
+def _lan_ip() -> str:
+    """Best-effort LAN IPv4 for the startup banner. Never touches /proc."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
 
 def _pid_alive(pid: int) -> bool:
     """Cross-platform liveness probe. Never touches /proc."""
@@ -253,7 +264,12 @@ class FlowSupervisor:
             self.spawn_daemon("airgap_sweeper")
             self.spawn_daemon("flow_dashboard")
             dash_port = os.environ.get("FLOW_DASH_PORT", DEFAULT_DASH_PORT)
-            print(f"\n[LIVE] Flow IDE active | Dashboard: http://127.0.0.1:{dash_port} | Ctrl+C to stop.\n", flush=True)
+            dash_host = os.environ.get("FLOW_DASH_HOST", "0.0.0.0")
+            print(
+                f"\n[LIVE] Flow IDE active | bind {dash_host}:{dash_port} | local http://127.0.0.1:{dash_port}"
+                f" | LAN http://{_lan_ip()}:{dash_port} | Ctrl+C to stop.\n",
+                flush=True,
+            )
             last_hop_ts = 0.0
             while RUNNING:
                 self.check_and_heal_daemons()

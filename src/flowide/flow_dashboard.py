@@ -11,6 +11,10 @@ import sqlite3
 import sys
 
 DEFAULT_DB = Path(os.environ.get("FLOW_DB_PATH", "flow_substrate.db"))
+# Default bind is 0.0.0.0 so the dashboard is reachable from other machines on
+# the LAN -- a localhost-only monitor "does me no good" if it cannot be opened
+# from the network (Auteur directive, 2026-11-16). Set FLOW_DASH_HOST=127.0.0.1
+# to restrict to loopback. The dashboard has NO authentication: trusted LAN only.
 BIND_HOST = os.environ.get("FLOW_DASH_HOST", "0.0.0.0")
 # Auteur's number (9898). Override with FLOW_DASH_PORT.
 BIND_PORT = int(os.environ.get("FLOW_DASH_PORT", "9898"))
@@ -312,7 +316,7 @@ def main() -> None:
     db_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_DB
     FlowDashboardHandler.db_path = db_path.resolve()
     server = ThreadingHTTPServer((BIND_HOST, BIND_PORT), FlowDashboardHandler)
-    print(f"Flow IDE Browser GUI -> Local: [http://127.0.0.1](http://127.0.0.1):{BIND_PORT} | LAN: http://{get_lan_ip()}:{BIND_PORT}", flush=True)
+    print(f"Flow IDE Browser GUI -> bind {BIND_HOST}:{BIND_PORT} | local http://127.0.0.1:{BIND_PORT} | LAN http://{get_lan_ip()}:{BIND_PORT}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
